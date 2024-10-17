@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_alert_dialog"
+    android:gravity="center"
+    android:minWidth="300dp"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/selectedDateShow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="선택된 날짜 보여주기"
+        android:textSize="16sp"/>
+
+    <EditText
+        android:id="@+id/add_memo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textSize="14sp"
+        android:hint="메모를 추가해보세요!"
+        android:padding="8dp"
+        android:background="@color/white"
+        android:maxLines="1"
+        android:maxLength="24"
+        android:layout_marginTop="12dp"/>
+
+    <LinearLayout
+        android:id="@+id/btn_add"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/input_layout_pw"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/bg_box_yellow"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        android:padding="8dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="추가하기"
+            android:textSize="14sp"/>
+
+    </LinearLayout>
+
+</LinearLayout>

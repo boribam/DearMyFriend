@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="72dp"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:cardCornerRadius="4dp"
+    android:layout_margin="4dp"
+    android:background="@color/white"
+    app:cardElevation="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:layout_margin="12dp"
+        android:gravity="center_vertical">
+
+        <CheckBox
+            android:id="@+id/checkbox"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:button="@android:color/transparent"
+            android:background="@drawable/checkbox_theme"
+            android:layout_marginLeft="8dp"/>
+
+        <TextView
+            android:id="@+id/memo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="20글자 제한하겠습니다."
+            android:textSize="16sp"
+            android:maxLines="1"
+            android:maxLength="20"
+            android:layout_marginLeft="12dp"/>
+
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>

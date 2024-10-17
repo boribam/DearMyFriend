@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@+id/bnv_calendar" android:title="달력" android:icon="@drawable/calendar"/>
+    <item android:id="@+id/bnv_hospital" android:title="병원찾기" android:icon="@drawable/map"/>
+    <item android:id="@+id/bnv_social" android:title="소셜" android:icon="@drawable/social"/>
+    <item android:id="@+id/bnv_animal" android:title="유기동물" android:icon="@drawable/animal"/>
+    <item android:id="@+id/bnv_mypage" android:title="마이페이지" android:icon="@drawable/mypage"/>
+
+</menu>
