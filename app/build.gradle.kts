@@ -58,6 +58,9 @@ dependencies {
     // circle imageView
     implementation("de.hdodenhof:circleimageview:3.1.0")
 
+    // Glide
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+
     // calendarView
     implementation("com.github.prolificinteractive:material-calendarview:2.0.1")
     implementation("com.google.android.gms:play-services-location:21.0.1")
