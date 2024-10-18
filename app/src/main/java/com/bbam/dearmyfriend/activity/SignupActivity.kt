@@ -4,14 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import com.bbam.dearmyfriend.MainActivity
-import com.bbam.dearmyfriend.R
 import com.bbam.dearmyfriend.databinding.ActivitySignupBinding
 import com.google.android.material.snackbar.Snackbar
 import com.google.firebase.Firebase
