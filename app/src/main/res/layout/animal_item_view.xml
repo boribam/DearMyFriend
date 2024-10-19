@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:contentPadding="12dp"
+    android:layout_margin="4dp"
+    app:cardCornerRadius="4dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <ImageView
+            android:id="@+id/iv_thumb"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:scaleType="centerCrop"
+            app:cardCornerRadius="4dp"/>
+
+        <TextView
+            android:id="@+id/tv_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="공고기간 : "
+            android:textSize="12dp"
+            android:textStyle="bold"
+            android:layout_toRightOf="@id/iv_thumb"
+            android:layout_marginLeft="24dp"
+            android:layout_marginTop="5dp"/>
+
+        <TextView
+            android:id="@+id/tv_dateStart"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="24.05.05"
+            android:textSize="12dp"
+            android:layout_toRightOf="@id/tv_date"
+            android:layout_alignBottom="@id/tv_date"/>
+
+        <TextView
+            android:id="@+id/tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="~"
+            android:textSize="12dp"
+            android:layout_toRightOf="@id/tv_dateStart"
+            android:layout_alignBottom="@id/tv_date"
+            android:layout_marginLeft="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_dateEnd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="24.08.07"
+            android:textSize="12dp"
+            android:layout_toRightOf="@id/tv"
+            android:layout_alignBottom="@id/tv_date"
+            android:layout_marginLeft="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_kin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="품종 : "
+            android:textSize="12dp"
+            android:textStyle="bold"
+            android:layout_toRightOf="@id/iv_thumb"
+            android:layout_below="@id/tv_date"
+            android:layout_marginLeft="24dp"
+            android:layout_marginTop="6dp"/>
+
+        <TextView
+            android:id="@+id/tv_kind"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/tv_kin"
+            android:layout_alignBottom="@id/tv_kin"
+            android:text="[고양이] 한국 고양이"
+            android:textSize="12dp"/>
+
+        <TextView
+            android:id="@+id/tv_ag"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="나이 : "
+            android:textStyle="bold"
+            android:textSize="12dp"
+            android:layout_toRightOf="@id/iv_thumb"
+            android:layout_below="@id/tv_kind"
+            android:layout_marginLeft="24dp"
+            android:layout_marginTop="6dp"/>
+
+        <TextView
+            android:id="@+id/tv_age"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/tv_ag"
+            android:layout_alignBottom="@id/tv_ag"
+            android:text="2024(년생)"
+            android:textSize="12dp"/>
+
+        <TextView
+            android:id="@+id/tv_hidden"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="발견장소 : "
+            android:textStyle="bold"
+            android:textSize="12dp"
+            android:layout_toRightOf="@id/iv_thumb"
+            android:layout_below="@id/tv_age"
+            android:layout_marginLeft="24dp"
+            android:layout_marginTop="6dp"/>
+
+        <TextView
+            android:id="@+id/tv_happenPlace"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/tv_hidden"
+            android:layout_alignBottom="@id/tv_hidden"
+            android:text="충남 홍성군"
+            android:textSize="12dp"
+            android:maxLines="1"
+            android:ellipsize="end"/>
+
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>
