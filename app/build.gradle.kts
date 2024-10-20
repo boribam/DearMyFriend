@@ -47,6 +47,8 @@ dependencies {
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.firebase.storage)
+    implementation(libs.converter.gson)
+    implementation(libs.retrofit)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -67,4 +69,6 @@ dependencies {
 
     implementation("com.squareup.okhttp3:okhttp:4.9.3")  // OkHttp 라이브러리
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")  // HttpLoggingInterceptor
+
+    implementation("com.naver.maps:map-sdk:3.19.1")
 }
