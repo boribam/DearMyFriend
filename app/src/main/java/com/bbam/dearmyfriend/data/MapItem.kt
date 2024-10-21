@@ -8,5 +8,7 @@ data class MapItem(
     @SerializedName("도로명전체주소") val address: String?,
     @SerializedName("소재지전화") val phoneNumber: String?,
     @SerializedName("영업상태구분코드") val statusCode: Int,
-    @SerializedName("상세영업상태명") val statusName: String?
+    @SerializedName("상세영업상태명") val statusName: String?,
+    var latitude: Double?,
+    var longitude: Double?
 )

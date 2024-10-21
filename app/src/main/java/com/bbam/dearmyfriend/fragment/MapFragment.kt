@@ -49,8 +49,6 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         RetrofitHelper.getNaverApiRetrofitInstance().create(RetrofitService::class.java)
     }
 
-//    private lateinit var clusterer: Clusterer<NaverItem>
-
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
     }
@@ -86,70 +84,84 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         naverMap.uiSettings.isLocationButtonEnabled = true
         naverMap.locationTrackingMode = LocationTrackingMode.Follow
 
-        fetchHospitalData(naverMap)
+//        fetchHospitalData(naverMap)
+
+        // 병원 데이터를 가져오고, 주소로 좌표 변환 후 마커를 지도에 표시
+        fetchHospitalData()
 
     }
 
-    private fun fetchHospitalData(naverMap: NaverMap) {
+    private fun fetchHospitalData() {
         dothomeService.getHospitalInformation().enqueue(object : Callback<List<MapItem>> {
             override fun onResponse(call: Call<List<MapItem>>, response: Response<List<MapItem>>) {
                 if (response.isSuccessful) {
-                    val hospitalList = response.body()?.filter {
-                        it.statusCode == 1 // 영업 상태가 "정상"인 병원만 필터링
-                    } ?: emptyList()
+                    val hospitalList = response.body() ?: emptyList()
 
-                    // 도로명 주소로 좌표 변환 후 마커 추가
+                    // 병원 데이터를 받아와서 각각의 병원 주소를 좌표로 변환 후 마커로 표시
                     for (hospital in hospitalList) {
-                        convertAddressToCoordinates(hospital)
+                        if (hospital.latitude == null || hospital.longitude == null) {
+                            convertAddressToCoordinates(hospital)
+                        } else {
+                            addMarker(LatLng(hospital.latitude!!, hospital.longitude!!), hospital)
+                        }
                     }
                 } else {
-                    Log.e("HospitalFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
+                    Log.e("MapFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
                 }
             }
 
             override fun onFailure(call: Call<List<MapItem>>, t: Throwable) {
-                Log.e("HospitalFragment", "Error: ${t.message}")
+                Log.e("MapFragment", "Error: ${t.message}")
             }
         })
     }
 
+    // 지도에 마커를 추가하는 함수
+    private fun addMarker(latLng: LatLng, hospital: MapItem) {
+        val marker = Marker().apply {
+            position = latLng
+            map = naverMap
+            captionText = hospital.name ?: "병원 이름 없음"
+            setOnClickListener {
+                showBottomSheet(hospital)
+                true
+            }
+        }
+    }
+
+    // 병원의 주소를 위도와 경도로 변환한 후 마커를 지도에 추가
     private fun convertAddressToCoordinates(hospital: MapItem) {
-        naverApiService.getCoordinates(hospital.address ?: "").enqueue(object :
-            Callback<GeocodeResponse> {
+
+        // 주소가 유효한지 확인
+        if (hospital.address.isNullOrEmpty()) {
+            Log.e("MapFragment", "Invalid address: ${hospital.address}")
+            return
+        }
+        val formattedAddress = hospital.address.trim()
+        naverApiService.getCoordinates(formattedAddress).enqueue(object : Callback<GeocodeResponse> {
             override fun onResponse(call: Call<GeocodeResponse>, response: Response<GeocodeResponse>) {
                 if (response.isSuccessful) {
-                    Log.d("GeocodeResponse", "Response: ${response.body()}")
                     val geocodeResponse = response.body()
                     val coordinates = geocodeResponse?.addresses?.firstOrNull()
                     if (coordinates != null) {
-                        val latitude = coordinates.y.toDouble()
-                        val longitude = coordinates.x.toDouble()
-                        addMarkerToCluster(LatLng(latitude, longitude), hospital, naverMap)
+                        val latLng = LatLng(coordinates.y.toDouble(), coordinates.x.toDouble())
+                        hospital.latitude = latLng.latitude
+                        hospital.longitude = latLng.longitude
+
+                        // 변환된 좌표로 마커 추가
+                        addMarker(latLng, hospital)
+                    } else {
+                        Log.e("GeocodeResponse", "No coordinates found for address: ${hospital.address}")
                     }
                 } else {
-                    Log.e("HospitalFragment", "Failed to convert address: ${response.errorBody()?.string()}")
-                    Log.e("GeocodeResponse", "Error response: ${response.errorBody()?.string()}")
+                    Log.e("GeocodeResponse", "Geocode API failed: ${response.errorBody()?.string()}")
                 }
             }
 
             override fun onFailure(call: Call<GeocodeResponse>, t: Throwable) {
-                Log.e("HospitalFragment", "Error: ${t.message}")
                 Log.e("GeocodeResponse", "Network error: ${t.message}")
             }
         })
-    }
-
-    private fun addMarkerToCluster(position: LatLng, hospital: MapItem, naverMap: NaverMap) {
-        val marker = Marker().apply {
-            this.position = position
-            this.map = naverMap
-            this.captionText = hospital.name ?: "병원 이름 없음"
-        }
-
-        marker.setOnClickListener {
-            showBottomSheet(hospital)
-            true
-        }
     }
 
     private fun showBottomSheet(hospital: MapItem) {
