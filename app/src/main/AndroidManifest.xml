@@ -23,6 +23,9 @@
             android:name=".activity.PostCommentActivity"
             android:exported="false" />
         <activity
+            android:name=".activity.PostWritingActivity"
+            android:exported="false" />
+        <activity
             android:name=".activity.SignupActivity"
             android:exported="false" />
         <activity

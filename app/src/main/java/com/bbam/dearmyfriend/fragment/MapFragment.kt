@@ -21,6 +21,7 @@ import com.bbam.dearmyfriend.network.RetrofitService
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.naver.maps.geometry.LatLng
+import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.LocationTrackingMode
 import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
@@ -139,25 +140,16 @@ class MapFragment: Fragment(), OnMapReadyCallback {
     }
 
     private fun addMarkerToCluster(position: LatLng, hospital: MapItem, naverMap: NaverMap) {
+        val marker = Marker().apply {
+            this.position = position
+            this.map = naverMap
+            this.captionText = hospital.name ?: "병원 이름 없음"
+        }
 
-//        val clusterItem = object : TedClusterItem {
-//            override fun getTedLatLng(): TedLatLng {
-//                return TedLatLng(position.latitude, position.longitude)
-//            }
-//        }
-//
-//        TedNaverClustering.with<TedClusterItem>(requireContext(), naverMap)
-//            .items(listOf(clusterItem))
-//            .make { item ->
-//                Marker().apply {
-//                    position = LatLng(item.)
-//                }
-//            }
-//
-//        marker.setOnClickListener {
-//            showBottomSheet(hospital)
-//            true
-//        }
+        marker.setOnClickListener {
+            showBottomSheet(hospital)
+            true
+        }
     }
 
     private fun showBottomSheet(hospital: MapItem) {
@@ -181,26 +173,48 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
         when {
             permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
-                initMapView()  // 권한이 허용된 후 지도 초기화
+                initMapView()  // 권한이 허용된 경우 지도 초기화
             }
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
-                initMapView()  // 권한이 허용된 후 지도 초기화
+                initMapView()  // 대략적인 위치 권한이 허용된 경우 지도 초기화
             }
             else -> {
                 Snackbar.make(binding.root, "위치 권한을 허용해주세요.", Snackbar.LENGTH_SHORT).show()
+
+                // 지도는 여전히 초기화하지만, 사용자 위치 추적을 비활성화
+                initMapViewWithoutLocationTracking()
             }
         }
     }
 
+    // 권한을 거부했을 때 지도 초기화는 하되, 위치 추적은 하지 않음
+    private fun initMapViewWithoutLocationTracking() {
+        val fm = childFragmentManager
+        val mapFragment = fm.findFragmentById(R.id.map_fragment) as com.naver.maps.map.MapFragment?
+            ?: com.naver.maps.map.MapFragment.newInstance().also {
+                fm.beginTransaction().replace(R.id.map_fragment, it).commit()
+            }
+
+        mapFragment.getMapAsync { naverMap ->
+            // 기본 위치로 지도 이동 (예: 서울)
+            val seoul = LatLng(37.5665, 126.9780)
+            val cameraUpdate = CameraUpdate.scrollAndZoomTo(seoul, 10.0)
+            naverMap.moveCamera(cameraUpdate)
+
+            // 위치 추적 모드 비활성화
+            naverMap.locationTrackingMode = LocationTrackingMode.None
+        }
+    }
+
     private fun initMapView() {
-//        val fm = childFragmentManager
-//        val mapFragment = fm.findFragmentById(R.id.map_fragment) as MapFragment?
-//            ?: MapFragment.newInstance().also {
-//                fm.beginTransaction().add(R.id.map_fragment, it).commit()
-//            }
-//
-//        mapFragment.getMapAsync(this)
-//        locationSource = FusedLocationSource(this, LOCATION_PERMISSION_REQUEST_CODE)
+        val fm = childFragmentManager
+        val mapFragment = fm.findFragmentById(R.id.map_fragment) as com.naver.maps.map.MapFragment?
+            ?: com.naver.maps.map.MapFragment.newInstance().also {
+                fm.beginTransaction().add(R.id.map_fragment, it).commit()
+            }
+
+        mapFragment.getMapAsync(this)
+        locationSource = FusedLocationSource(this, LOCATION_PERMISSION_REQUEST_CODE)
     }
 
     private fun hasPermission() : Boolean {

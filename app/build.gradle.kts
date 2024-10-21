@@ -63,6 +63,8 @@ dependencies {
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
 
+    implementation("com.squareup.picasso:picasso:2.8")
+
     // calendarView
     implementation("com.github.prolificinteractive:material-calendarview:2.0.1")
     implementation("com.google.android.gms:play-services-location:21.0.1")
