@@ -9,9 +9,11 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.bbam.dearmyfriend.R
 import com.bbam.dearmyfriend.data.GeocodeResponse
 import com.bbam.dearmyfriend.data.MapItem
@@ -21,12 +23,16 @@ import com.bbam.dearmyfriend.network.RetrofitService
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.snackbar.Snackbar
 import com.naver.maps.geometry.LatLng
+import com.naver.maps.geometry.LatLngBounds
 import com.naver.maps.map.CameraUpdate
 import com.naver.maps.map.LocationTrackingMode
 import com.naver.maps.map.NaverMap
 import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.util.FusedLocationSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -53,6 +59,8 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
     }
 
+    private lateinit var locationPermissionRequest: ActivityResultLauncher<Array<String>>
+
     private val permissions = arrayOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION
@@ -71,9 +79,29 @@ class MapFragment: Fragment(), OnMapReadyCallback {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        locationPermissionRequest = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val fineLocationGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)
+            val coarseLocationGranted = permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+
+            if (fineLocationGranted || coarseLocationGranted) {
+                initMapView()
+            } else {
+                Snackbar.make(binding.root, "위치 권한을 허용해주세요.", Snackbar.LENGTH_SHORT).show()
+                initMapViewWithoutLocationTracking()
+            }
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
         if (!hasPermission()) {
-            ActivityCompat.requestPermissions(requireActivity(), permissions, LOCATION_PERMISSION_REQUEST_CODE)
+            Log.d("MapFragment", "권한 요청을 실행합니다.")
+            locationPermissionRequest.launch(permissions)
         } else {
+            // 권한이 이미 허용된 경우 지도 초기화
+            Log.d("MapFragment", "권한이 이미 허용되었습니다.")
             initMapView()
         }
     }
@@ -87,46 +115,91 @@ class MapFragment: Fragment(), OnMapReadyCallback {
 //        fetchHospitalData(naverMap)
 
         // 병원 데이터를 가져오고, 주소로 좌표 변환 후 마커를 지도에 표시
-        fetchHospitalData()
+        loadHospitalData()
 
     }
 
-    private fun fetchHospitalData() {
-        dothomeService.getHospitalInformation().enqueue(object : Callback<List<MapItem>> {
-            override fun onResponse(call: Call<List<MapItem>>, response: Response<List<MapItem>>) {
+    private fun loadHospitalData() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response = dothomeService.getHospitalInformation().execute()
                 if (response.isSuccessful) {
-                    val hospitalList = response.body() ?: emptyList()
+                    val hospitals = response.body() ?: emptyList()
 
-                    // 병원 데이터를 받아와서 각각의 병원 주소를 좌표로 변환 후 마커로 표시
-                    for (hospital in hospitalList) {
-                        if (hospital.latitude == null || hospital.longitude == null) {
-                            convertAddressToCoordinates(hospital)
-                        } else {
-                            addMarker(LatLng(hospital.latitude!!, hospital.longitude!!), hospital)
-                        }
+                    withContext(Dispatchers.Main) {
+                        hospitalList.clear()
+                        hospitalList.addAll(hospitals)
+
+                        updateMarkersInView(naverMap)
                     }
                 } else {
                     Log.e("MapFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
                 }
+            } catch (e: Exception) {
+                Log.e("MapFragment", "Error loading data: ${e.message}")
             }
-
-            override fun onFailure(call: Call<List<MapItem>>, t: Throwable) {
-                Log.e("MapFragment", "Error: ${t.message}")
-            }
-        })
+        }
     }
 
-    // 지도에 마커를 추가하는 함수
+//    private fun fetchHospitalData() {
+//        dothomeService.getHospitalInformation().enqueue(object : Callback<List<MapItem>> {
+//            override fun onResponse(call: Call<List<MapItem>>, response: Response<List<MapItem>>) {
+//                if (response.isSuccessful) {
+//                    val hospitals = response.body() ?: emptyList()
+//
+//                    hospitalList.clear()
+//                    hospitalList.addAll(hospitals)
+//
+//                    updateMarkersInView(naverMap)
+//
+////                    // 병원 데이터를 받아와서 각각의 병원 주소를 좌표로 변환 후 마커로 표시
+////                    for (hospital in hospitalList) {
+////                        if (hospital.latitude == null || hospital.longitude == null) {
+////                            convertAddressToCoordinates(hospital)
+////                        } else {
+////                            addMarker(LatLng(hospital.latitude!!, hospital.longitude!!), hospital)
+////                        }
+////                    }
+//                } else {
+//                    Log.e("MapFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
+//                }
+//            }
+//
+//            override fun onFailure(call: Call<List<MapItem>>, t: Throwable) {
+//                Log.e("MapFragment", "Error: ${t.message}")
+//            }
+//        })
+//    }
+
+    // 지도의 현재 화면에 있는 마커만 업데이트
+    private fun updateMarkersInView(naverMap: NaverMap) {
+        val currentBounds: LatLngBounds = naverMap.contentBounds
+
+        // 기존 마커를 모두 제거
+        markerList.forEach { it.map = null }
+        markerList.clear()
+
+        // 현재 화면에 보이는 영역 내에 있는 병원만 마커로 추가
+        for (hospital in hospitalList) {
+            val position = LatLng(hospital.latitude!!, hospital.longitude!!)
+            if (currentBounds.contains(position)) {
+                addMarker(position, hospital)
+            }
+        }
+    }
+
+    // 마커를 추가하는 함수
     private fun addMarker(latLng: LatLng, hospital: MapItem) {
         val marker = Marker().apply {
             position = latLng
-            map = naverMap
+            map = naverMap  // 마커를 지도에 추가
             captionText = hospital.name ?: "병원 이름 없음"
             setOnClickListener {
                 showBottomSheet(hospital)
                 true
             }
         }
+        markerList.add(marker) // 추가한 마커를 리스트에 저장
     }
 
     // 병원의 주소를 위도와 경도로 변환한 후 마커를 지도에 추가
@@ -137,6 +210,7 @@ class MapFragment: Fragment(), OnMapReadyCallback {
             Log.e("MapFragment", "Invalid address: ${hospital.address}")
             return
         }
+
         val formattedAddress = hospital.address.trim()
         naverApiService.getCoordinates(formattedAddress).enqueue(object : Callback<GeocodeResponse> {
             override fun onResponse(call: Call<GeocodeResponse>, response: Response<GeocodeResponse>) {
@@ -181,24 +255,6 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         bottomSheetDialog.show()
     }
 
-    private val locationPermissionRequest = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        when {
-            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
-                initMapView()  // 권한이 허용된 경우 지도 초기화
-            }
-            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
-                initMapView()  // 대략적인 위치 권한이 허용된 경우 지도 초기화
-            }
-            else -> {
-                Snackbar.make(binding.root, "위치 권한을 허용해주세요.", Snackbar.LENGTH_SHORT).show()
-
-                // 지도는 여전히 초기화하지만, 사용자 위치 추적을 비활성화
-                initMapViewWithoutLocationTracking()
-            }
-        }
-    }
-
     // 권한을 거부했을 때 지도 초기화는 하되, 위치 추적은 하지 않음
     private fun initMapViewWithoutLocationTracking() {
         val fm = childFragmentManager
@@ -232,9 +288,11 @@ class MapFragment: Fragment(), OnMapReadyCallback {
     private fun hasPermission() : Boolean {
         for (permission in permissions) {
             if (ContextCompat.checkSelfPermission(requireContext(), permission) != PackageManager.PERMISSION_GRANTED) {
+                Log.d("MapFragment", "권한이 없습니다: $permission")
                 return false
             }
         }
+        Log.d("MapFragment", "모든 권한이 허용되었습니다.")
         return true
     }
 }

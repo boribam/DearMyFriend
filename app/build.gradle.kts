@@ -73,4 +73,6 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")  // HttpLoggingInterceptor
 
     implementation("com.naver.maps:map-sdk:3.19.1")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9")
 }
