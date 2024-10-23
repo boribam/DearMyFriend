@@ -31,6 +31,7 @@ import com.naver.maps.map.OnMapReadyCallback
 import com.naver.maps.map.overlay.Marker
 import com.naver.maps.map.util.FusedLocationSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.Call
@@ -112,9 +113,18 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         naverMap.uiSettings.isLocationButtonEnabled = true
         naverMap.locationTrackingMode = LocationTrackingMode.Follow
 
-//        fetchHospitalData(naverMap)
+        // 지도가 준비되었을 때만 마커 추가
+        updateMarkersInView(naverMap)
+
+        // 지도가 이동할 때마다 경계 내 마커 업데이트
+        naverMap.addOnCameraChangeListener { _, _ ->
+            if (!hospitalList.isNullOrEmpty()) {
+                updateMarkersInView(naverMap)
+            }
+        }
 
         // 병원 데이터를 가져오고, 주소로 좌표 변환 후 마커를 지도에 표시
+        // 병원 데이터를 비동기로 로드하여 마커를 표시
         loadHospitalData()
 
     }
@@ -128,64 +138,79 @@ class MapFragment: Fragment(), OnMapReadyCallback {
 
                     withContext(Dispatchers.Main) {
                         hospitalList.clear()
-                        hospitalList.addAll(hospitals)
 
-                        updateMarkersInView(naverMap)
+                        val operatingHospitals = hospitals.filter { hospital ->
+                            hospital.statusCode == 1
+                        }
+
+                        hospitalList.addAll(operatingHospitals)
+
+                        if(naverMap != null) {
+                            updateMarkersInView(naverMap!!)
+                        }
+
+                        operatingHospitals.forEach { hospital ->
+                            if (!hospital.address.isNullOrEmpty()) {
+                                convertAddressToCoordinates(hospital)
+                            } else {
+                                Log.e("MapFragment", "Hospital has no valid address: ${hospital.name}")
+                            }
+                        }
+
                     }
                 } else {
-                    Log.e("MapFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
+                    withContext(Dispatchers.Main) {
+                        Log.e("MapFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("MapFragment", "Error loading data: ${e.message}")
+                withContext(Dispatchers.Main) {
+                    Log.e("MapFragment", "Error loading data: ${e.message}")
+                }
             }
         }
     }
 
-//    private fun fetchHospitalData() {
-//        dothomeService.getHospitalInformation().enqueue(object : Callback<List<MapItem>> {
-//            override fun onResponse(call: Call<List<MapItem>>, response: Response<List<MapItem>>) {
-//                if (response.isSuccessful) {
-//                    val hospitals = response.body() ?: emptyList()
-//
-//                    hospitalList.clear()
-//                    hospitalList.addAll(hospitals)
-//
-//                    updateMarkersInView(naverMap)
-//
-////                    // 병원 데이터를 받아와서 각각의 병원 주소를 좌표로 변환 후 마커로 표시
-////                    for (hospital in hospitalList) {
-////                        if (hospital.latitude == null || hospital.longitude == null) {
-////                            convertAddressToCoordinates(hospital)
-////                        } else {
-////                            addMarker(LatLng(hospital.latitude!!, hospital.longitude!!), hospital)
-////                        }
-////                    }
-//                } else {
-//                    Log.e("MapFragment", "Failed to fetch data: ${response.errorBody()?.string()}")
-//                }
-//            }
-//
-//            override fun onFailure(call: Call<List<MapItem>>, t: Throwable) {
-//                Log.e("MapFragment", "Error: ${t.message}")
-//            }
-//        })
-//    }
-
     // 지도의 현재 화면에 있는 마커만 업데이트
     private fun updateMarkersInView(naverMap: NaverMap) {
+
+        // naverMap 또는 hospitalList가 null일 경우 처리
+        if (naverMap == null || hospitalList.isNullOrEmpty()) {
+            Log.e("MapFragment", "NaverMap or hospitalList is null or empty")
+            return
+        }
+
         val currentBounds: LatLngBounds = naverMap.contentBounds
 
-        // 기존 마커를 모두 제거
-        markerList.forEach { it.map = null }
-        markerList.clear()
-
-        // 현재 화면에 보이는 영역 내에 있는 병원만 마커로 추가
-        for (hospital in hospitalList) {
-            val position = LatLng(hospital.latitude!!, hospital.longitude!!)
-            if (currentBounds.contains(position)) {
-                addMarker(position, hospital)
+        // 기존 마커 중 화면에서 벗어난 마커는 비활성화
+        markerList.forEach { marker ->
+            if (!currentBounds.contains(marker.position)) {
+                marker.map = null  // 지도에서 제거
             }
         }
+
+        // 화면에 보이는 마커 중 아직 추가되지 않은 마커만 추가
+        for (hospital in hospitalList) {
+            // 병원의 위도와 경도가 null인지 확인
+            if (hospital.latitude == null || hospital.longitude == null) {
+                Log.e("MapFragment", "Hospital has invalid coordinates: ${hospital.name}")
+                continue
+            }
+
+            val position = LatLng(hospital.latitude!!, hospital.longitude!!)
+            if (currentBounds.contains(position)) {
+                // 이미 추가된 마커인지 확인 후, 없으면 추가
+                val existingMarker = markerList.find { it.position == position }
+                if (existingMarker == null) {
+                    addMarker(position, hospital)
+                } else {
+                    existingMarker.map = naverMap // 기존 마커 활성화
+                }
+            }
+        }
+
+        Log.d("MapFragment", "naverMap: $naverMap, hospitalList size: ${hospitalList?.size}")
+
     }
 
     // 마커를 추가하는 함수
@@ -202,28 +227,31 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         markerList.add(marker) // 추가한 마커를 리스트에 저장
     }
 
-    // 병원의 주소를 위도와 경도로 변환한 후 마커를 지도에 추가
     private fun convertAddressToCoordinates(hospital: MapItem) {
+        val formattedAddress = hospital.address?.trim() ?: ""
 
-        // 주소가 유효한지 확인
-        if (hospital.address.isNullOrEmpty()) {
-            Log.e("MapFragment", "Invalid address: ${hospital.address}")
-            return
-        }
-
-        val formattedAddress = hospital.address.trim()
+        // 지오코딩 API 호출
         naverApiService.getCoordinates(formattedAddress).enqueue(object : Callback<GeocodeResponse> {
             override fun onResponse(call: Call<GeocodeResponse>, response: Response<GeocodeResponse>) {
                 if (response.isSuccessful) {
                     val geocodeResponse = response.body()
                     val coordinates = geocodeResponse?.addresses?.firstOrNull()
-                    if (coordinates != null) {
-                        val latLng = LatLng(coordinates.y.toDouble(), coordinates.x.toDouble())
-                        hospital.latitude = latLng.latitude
-                        hospital.longitude = latLng.longitude
 
-                        // 변환된 좌표로 마커 추가
-                        addMarker(latLng, hospital)
+                    if (coordinates != null) {
+                        try {
+                            val latLng = LatLng(coordinates.y.toDouble(), coordinates.x.toDouble())
+
+                            // 변환된 좌표를 병원 객체에 저장
+                            hospital.latitude = latLng.latitude
+                            hospital.longitude = latLng.longitude
+
+                            // 변환된 좌표로 마커 추가
+                            addMarker(latLng, hospital)
+                            Log.d("MapFragment", "Geocoding successful: ${hospital.name} at ${latLng.latitude}, ${latLng.longitude}")
+
+                        } catch (e: Exception) {
+                            Log.e("MapFragment", "Error parsing coordinates for ${hospital.name}: ${e.message}")
+                        }
                     } else {
                         Log.e("GeocodeResponse", "No coordinates found for address: ${hospital.address}")
                     }
