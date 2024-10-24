@@ -20,12 +20,27 @@
         app:mcv_showOtherDates="none"
         android:paddingVertical="12dp"/>
 
+    <LinearLayout
+        android:id="@+id/tv_swipe"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/calendar_view">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="왼쪽으로 쓸어넘겨 메모를 삭제하세요!"
+        android:layout_marginLeft="20dp"
+        android:textSize="12sp"/>
+
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewSchedule"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:layout_marginTop="440dp"/>
+        android:layout_below="@id/tv_swipe"/>
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab"
