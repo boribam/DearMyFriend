@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="4dp"
+    android:background="@color/white">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tv_nickname"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="닉네임"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/tv_comment"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="안녕하세요. 이것은 댓글입니다. 안녕하세요. 이것은 댓글입니다."
+            android:textSize="12sp"
+            android:maxLines="2"
+            android:layout_marginTop="8dp"
+            android:layout_below="@id/tv_nickname"/>
+
+        <TextView
+            android:id="@+id/tv_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2024.01.01 24:00:00"
+            android:textSize="8sp"
+            android:layout_gravity="right"
+            android:layout_marginTop="20dp"
+            android:layout_below="@id/tv_comment"
+            android:layout_alignParentRight="true"/>
+
+        <ImageView
+            android:id="@+id/btnDelete"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:src="@drawable/delete"
+            android:layout_alignParentRight="true"/>
+
+    </RelativeLayout>
+
+
+</LinearLayout>
