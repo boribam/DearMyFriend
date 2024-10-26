@@ -89,7 +89,7 @@ class PostCommentActivity : AppCompatActivity() {
                     // Firestore에 댓글 저장
                     FirebaseFirestore.getInstance().collection("posts").document(postId).collection("comments").add(commentData)
                         .addOnSuccessListener {
-                            updateCommentCount(postId, 1) // 댓글 수 증가
+//                            updateCommentCount(postId, 1) // 댓글 수 증가
                         }
                         .addOnFailureListener { e ->
                             Log.e("CommentStoreError", "댓글 저장 실패: ${e.message}")
@@ -107,10 +107,10 @@ class PostCommentActivity : AppCompatActivity() {
             }
     }
 
-    private fun updateCommentCount(postId: String, increment: Long) {
-        val postRef = FirebaseFirestore.getInstance().collection("posts").document(postId)
-        postRef.update("commentCount", FieldValue.increment(increment))
-    }
+//    private fun updateCommentCount(postId: String, increment: Long) {
+//        val postRef = FirebaseFirestore.getInstance().collection("posts").document(postId)
+//        postRef.update("commentCount", FieldValue.increment(increment))
+//    }
 
     private fun fetchComments() {
         Firebase.firestore.collection("posts").document(postId)
@@ -146,7 +146,7 @@ class PostCommentActivity : AppCompatActivity() {
                         if (position != -1) {
                             itemList.removeAt(position)
                             commentAdapter.notifyItemRemoved(position)
-                            updateCommentCount(postId, -1)
+//                            updateCommentCount(postId, -1)
                         }
                     }.addOnFailureListener { e ->
                         Log.e("CommentDeleteError", "댓글 삭제 실패: ${e.message}")
@@ -156,7 +156,7 @@ class PostCommentActivity : AppCompatActivity() {
                 Log.e("comment delete failed", "${e.message}")
             }
         } else {
-            Snackbar.make(binding.root, "자신의 댓글만 삭제할 수 있습니다.", Snackbar.LENGTH_SHORT).show()
+            Snackbar.make(binding.root, "자신이 쓴 댓글만 삭제할 수 있습니다.", Snackbar.LENGTH_SHORT).show()
         }
     }
 
