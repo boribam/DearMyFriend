@@ -116,12 +116,12 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         // 지도가 준비되었을 때만 마커 추가
         updateMarkersInView(naverMap)
 
-        // 지도가 이동할 때마다 경계 내 마커 업데이트
-        naverMap.addOnCameraChangeListener { _, _ ->
-            if (!hospitalList.isNullOrEmpty()) {
-                updateMarkersInView(naverMap)
-            }
-        }
+//        // 지도가 이동할 때마다 경계 내 마커 업데이트
+//        naverMap.addOnCameraChangeListener { _, _ ->
+//            if (!hospitalList.isNullOrEmpty()) {
+//                updateMarkersInView(naverMap)
+//            }
+//        }
 
         // 병원 데이터를 가져오고, 주소로 좌표 변환 후 마커를 지도에 표시
         // 병원 데이터를 비동기로 로드하여 마커를 표시
