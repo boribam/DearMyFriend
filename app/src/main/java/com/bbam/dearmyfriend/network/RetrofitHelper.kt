@@ -37,5 +37,14 @@ class RetrofitHelper {
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
         }
+
+        fun getInstance() : Retrofit {
+            val retrofit = Retrofit.Builder().run {
+                baseUrl(DOTHOME_BASE_URL)
+                addConverterFactory(GsonConverterFactory.create())
+                build()
+            }
+            return retrofit
+        }
     }
 }
