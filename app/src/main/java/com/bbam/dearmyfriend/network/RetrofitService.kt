@@ -2,12 +2,22 @@ package com.bbam.dearmyfriend.network
 
 import com.bbam.dearmyfriend.data.GeocodeResponse
 import com.bbam.dearmyfriend.data.MapItem
+import com.bbam.dearmyfriend.data.RegisterResponse
 import retrofit2.Call
+import retrofit2.http.FieldMap
+import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
 import retrofit2.http.Headers
+import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface RetrofitService {
+
+    @FormUrlEncoded
+    @POST("/dearfriend/insertUserDB.php")
+    fun registerUser(
+        @FieldMap dataPart: Map<String, String>
+    ): Call<RegisterResponse>
 
     @GET("/dearfriend/hospital.json")
     fun getHospitalInformation(): Call<List<MapItem>>
