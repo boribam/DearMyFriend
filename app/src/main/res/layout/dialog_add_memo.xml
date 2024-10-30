@@ -33,7 +33,7 @@
         android:id="@+id/btn_add"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/input_layout_pw"
+        android:layout_below="@id/add_memo"
         android:layout_centerHorizontal="true"
         android:background="@drawable/bg_box_yellow"
         android:layout_marginTop="16dp"

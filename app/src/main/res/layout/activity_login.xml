@@ -16,53 +16,46 @@
         android:src="@drawable/logo_text"
         android:layout_marginTop="260dp"/>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/input_layout_email"
+    <EditText
+        android:id="@+id/et_email"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
+        android:hint="이메일을 입력하세요"
         android:layout_below="@id/logo"
-        android:layout_marginTop="24dp">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/et_email"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="80dp"
-            android:layout_marginRight="80dp"
-            android:hint="이메일"
-            android:textSize="14sp"
-            android:maxLines="1"
-            android:ellipsize="end"/>
-    </com.google.android.material.textfield.TextInputLayout>
+        android:layout_marginHorizontal="80dp"
+        android:textSize="12sp"
+        android:background="@drawable/bg_et_box"
+        android:padding="10dp"
+        android:layout_marginTop="50dp"
+        android:drawableStart="@drawable/baseline_email_24"
+        android:drawablePadding="4dp"
+        android:inputType="textEmailAddress"/>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/input_layout_pw"
+    <EditText
+        android:id="@+id/et_password"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.Dense"
-        android:layout_below="@id/input_layout_email"
-        app:endIconMode="password_toggle">
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/et_password"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="80dp"
-            android:layout_marginRight="80dp"
-            android:hint="비밀번호"
-            android:textSize="14sp"
-            android:maxLines="1"/>
-    </com.google.android.material.textfield.TextInputLayout>
+        android:hint="비밀번호를 입력하세요"
+        android:layout_below="@id/et_email"
+        android:layout_marginHorizontal="80dp"
+        android:textSize="12sp"
+        android:background="@drawable/bg_et_box"
+        android:padding="10dp"
+        android:layout_marginTop="8dp"
+        android:drawableStart="@drawable/baseline_lock_24"
+        android:drawablePadding="4dp"
+        android:inputType="textPassword"/>
 
     <LinearLayout
         android:id="@+id/btn_login"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/input_layout_pw"
+        android:layout_below="@id/et_password"
         android:layout_centerHorizontal="true"
         android:background="@drawable/bg_box_yellow"
-        android:layout_marginLeft="80dp"
-        android:layout_marginRight="80dp"
+        android:layout_marginHorizontal="80dp"
         android:layout_marginTop="16dp"
+        android:elevation="2dp"
         android:gravity="center"
         android:padding="8dp">
 

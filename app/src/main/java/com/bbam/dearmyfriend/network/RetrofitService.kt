@@ -1,9 +1,11 @@
 package com.bbam.dearmyfriend.network
 
 import com.bbam.dearmyfriend.data.GeocodeResponse
+import com.bbam.dearmyfriend.data.LoginResponse
 import com.bbam.dearmyfriend.data.MapItem
 import com.bbam.dearmyfriend.data.RegisterResponse
 import retrofit2.Call
+import retrofit2.http.Field
 import retrofit2.http.FieldMap
 import retrofit2.http.FormUrlEncoded
 import retrofit2.http.GET
@@ -18,6 +20,13 @@ interface RetrofitService {
     fun registerUser(
         @FieldMap dataPart: Map<String, String>
     ): Call<RegisterResponse>
+
+    @FormUrlEncoded
+    @POST("/dearfriend/login.php")
+    fun loginUser(
+        @Field("user_email") email: String,
+        @Field("user_password") password: String
+    ): Call<LoginResponse>
 
     @GET("/dearfriend/hospital.json")
     fun getHospitalInformation(): Call<List<MapItem>>
