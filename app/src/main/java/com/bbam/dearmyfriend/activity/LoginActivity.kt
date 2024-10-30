@@ -4,67 +4,63 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
-import com.bbam.dearmyfriend.G
+import com.bbam.dearmyfriend.data.LoginResponse
 import com.bbam.dearmyfriend.databinding.ActivityLoginBinding
+import com.bbam.dearmyfriend.network.RetrofitHelper
+import com.bbam.dearmyfriend.network.RetrofitService
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class LoginActivity : AppCompatActivity() {
 
     private val binding by lazy { ActivityLoginBinding.inflate(layoutInflater) }
 
-    private lateinit var auth: FirebaseAuth
+    private val retrofitService by lazy { RetrofitHelper.getInstance().create(RetrofitService::class.java) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
-        auth = Firebase.auth
+        binding.btnLogin.setOnClickListener {
+            val email = binding.etEmail.text.toString().trim()
+            val password = binding.etPassword.text.toString().trim()
 
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            // 사용자가 로그인된 상태일 경우, 메인 화면으로 이동
-            startActivity(Intent(this, MainActivity::class.java))
-            finish()
-        }
+            // 필수 정보 확인
+            if (email.isEmpty() || password.isEmpty()) {
+                Snackbar.make(binding.root, "모든 정보를 입력해주세요", Snackbar.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
-        binding.btnLogin.setOnClickListener{ clickLogin() }
-
-        binding.signUp.setOnClickListener {
-            startActivity(Intent(this, SignupActivity::class.java))
+            loginUser(email, password)
         }
     }
 
-    private fun clickLogin() {
-        val email = binding.etEmail.text.toString()
-        val pw = binding.etPassword.text.toString()
-
-        if (email.isEmpty()) {
-            Snackbar.make(binding.root, "이메일을 입력해주세요", Snackbar.LENGTH_SHORT).show()
-            return
-        }
-
-        if (pw.isEmpty()) {
-            Snackbar.make(binding.root, "비밀번호를 입력해주세요", Snackbar.LENGTH_SHORT).show()
-            return
-        }
-
-        auth.signInWithEmailAndPassword(email, pw).addOnCompleteListener(this) { task ->
-            if (task.isSuccessful) {
-                G.userId = auth.currentUser?.uid
-                G.userEmail = auth.currentUser?.email
-
-                val intent = Intent(this, MainActivity::class.java).putExtra("userId", auth.currentUser?.uid)
-                startActivity(intent)
-
-                finish() // 로그인 후에는 로그인 화면을 종료한다.
-
-            } else {
-                Log.e("login", "Login failed: ${task.exception?.message}")
-                Snackbar.make(binding.root, "이메일과 비밀번호를 다시 한번 확인해주세요", Snackbar.LENGTH_SHORT).show()
+    private fun loginUser(email: String, password: String) {
+        retrofitService.loginUser(email, password).enqueue(object : Callback<LoginResponse> {
+            override fun onResponse(p0: Call<LoginResponse>, p1: Response<LoginResponse>) {
+                if (p1.isSuccessful) {
+                    val loginResponse = p1.body()
+                    if (loginResponse?.success == true) {
+                        Snackbar.make(binding.root, "로그인 성공!", Snackbar.LENGTH_SHORT).show()
+                        startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                        finish()
+                    } else {
+                        // 로그인 실패 시 메세지 표시
+                        Snackbar.make(binding.root, loginResponse?.message ?: "로그인 실패", Snackbar.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Log.e("LoginActivity", "서버 응답 실패: ${p1.errorBody()?.string()}")
+                    Snackbar.make(binding.root, "서버 응답 실패", Snackbar.LENGTH_SHORT).show()
+                }
             }
-        }
+
+            override fun onFailure(p0: Call<LoginResponse>, p1: Throwable) {
+                Log.e("LoginActivity", "서버 오류: ${p1.message}")
+                Snackbar.make(binding.root, "서버 오류: ${p1.message}", Snackbar.LENGTH_SHORT).show()
+            }
+
+        })
     }
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="CustomButtonStyle" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/bg_box_yellow</item> <!-- 원하는 배경 설정 -->
+        <item name="android:textColor">@color/white</item>
+    </style>
+</resources>
