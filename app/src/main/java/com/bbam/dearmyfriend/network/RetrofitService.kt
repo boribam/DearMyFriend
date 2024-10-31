@@ -4,6 +4,7 @@ import com.bbam.dearmyfriend.data.GeocodeResponse
 import com.bbam.dearmyfriend.data.LoginResponse
 import com.bbam.dearmyfriend.data.MapItem
 import com.bbam.dearmyfriend.data.RegisterResponse
+import com.bbam.dearmyfriend.data.SessionResponse
 import retrofit2.Call
 import retrofit2.http.Field
 import retrofit2.http.FieldMap
@@ -27,6 +28,10 @@ interface RetrofitService {
         @Field("user_email") email: String,
         @Field("user_password") password: String
     ): Call<LoginResponse>
+
+    // 로그인 세션 확인
+    @GET("/dearfriend/checkSession.php")
+    fun checkSession(): Call<SessionResponse>
 
     @GET("/dearfriend/hospital.json")
     fun getHospitalInformation(): Call<List<MapItem>>

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import com.bbam.dearmyfriend.data.LoginResponse
+import com.bbam.dearmyfriend.data.SessionResponse
 import com.bbam.dearmyfriend.databinding.ActivityLoginBinding
 import com.bbam.dearmyfriend.network.RetrofitHelper
 import com.bbam.dearmyfriend.network.RetrofitService
@@ -22,6 +23,9 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+
+        // 로그인 상태 확인
+        checkLoginStatus()
 
         binding.btnLogin.setOnClickListener {
             val email = binding.etEmail.text.toString().trim()
@@ -61,6 +65,27 @@ class LoginActivity : AppCompatActivity() {
                 Snackbar.make(binding.root, "서버 오류: ${p1.message}", Snackbar.LENGTH_SHORT).show()
             }
 
+        })
+    }
+
+    private fun checkLoginStatus() {
+        retrofitService.checkSession().enqueue(object : Callback<SessionResponse> {
+            override fun onResponse(p0: Call<SessionResponse>, p1: Response<SessionResponse>) {
+                if (p1.isSuccessful) {
+                    val sessionResponse = p1.body()
+                    if (sessionResponse?.logged_in == true) {
+                        // 이미 로그인 된 상태라면 메인 화면으로 이동
+                        startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                        finish()
+                    }
+                } else {
+                    Log.e("LoginActivity", "세션 확인 실패: ${p1.errorBody()?.string()}")
+                }
+            }
+
+            override fun onFailure(p0: Call<SessionResponse>, p1: Throwable) {
+                Log.e("LoginActivity", "서버 오류: ${p1.message}")
+            }
         })
     }
 }
