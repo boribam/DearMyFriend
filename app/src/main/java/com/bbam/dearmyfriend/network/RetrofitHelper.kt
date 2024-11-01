@@ -44,23 +44,23 @@ class RetrofitHelper {
 
         fun getInstance() : Retrofit {
 
-//            val cookieManager = CookieManager().apply {
-//                setCookiePolicy(CookiePolicy.ACCEPT_ALL)
-//            }
-//
-//            // HttpLoggingInterceptor 추가 설정
-//            val logging = HttpLoggingInterceptor().apply {
-//                level = HttpLoggingInterceptor.Level.BODY
-//            }
+            val cookieManager = CookieManager().apply {
+                setCookiePolicy(CookiePolicy.ACCEPT_ALL)
+            }
 
-//            // OkHttpClient에 로깅 인터셉터 추가
-//            val client = OkHttpClient.Builder()
-//                .addInterceptor(logging)
-//                .build()
+            // HttpLoggingInterceptor 추가 설정
+            val logging = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BODY
+            }
+
+            // OkHttpClient에 로깅 인터셉터 추가
+            val client = OkHttpClient.Builder()
+                .addInterceptor(logging)
+                .build()
 
             val retrofit = Retrofit.Builder().run {
                 baseUrl(DOTHOME_BASE_URL)
-//                client(client) // 로깅이 포함된 OkHttpClient 사용
+                client(client) // 로깅이 포함된 OkHttpClient 사용
                 addConverterFactory(GsonConverterFactory.create())
                 build()
             }
