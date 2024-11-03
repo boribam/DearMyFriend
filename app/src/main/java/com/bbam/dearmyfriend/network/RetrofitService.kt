@@ -29,9 +29,9 @@ interface RetrofitService {
         @Field("user_password") password: String
     ): Call<LoginResponse>
 
-    // 로그인 세션 확인
-    @GET("/dearfriend/checkSession.php")
-    fun checkSession(): Call<SessionResponse>
+//    // 로그인 세션 확인
+//    @GET("/dearfriend/checkSession.php")
+//    fun checkSession(): Call<SessionResponse>
 
     @GET("/dearfriend/hospital.json")
     fun getHospitalInformation(): Call<List<MapItem>>
