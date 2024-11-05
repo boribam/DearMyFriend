@@ -3,7 +3,9 @@ package com.bbam.dearmyfriend.network
 import com.bbam.dearmyfriend.data.GeocodeResponse
 import com.bbam.dearmyfriend.data.LoginResponse
 import com.bbam.dearmyfriend.data.MapItem
+import com.bbam.dearmyfriend.data.MemoDate
 import com.bbam.dearmyfriend.data.RegisterResponse
+import com.bbam.dearmyfriend.data.ScheduleModel
 import com.bbam.dearmyfriend.data.SessionResponse
 import retrofit2.Call
 import retrofit2.http.Field
@@ -28,6 +30,41 @@ interface RetrofitService {
         @Field("user_email") email: String,
         @Field("user_password") password: String
     ): Call<LoginResponse>
+
+    // 일정 추가
+    @FormUrlEncoded
+    @POST("/dearfriend/addSchedule.php")
+    fun addSchedule(
+        @Field("uid") uid: String,
+        @Field("memo") memo: String,
+        @Field("date") date: String,
+        @Field("isChecked") isChecked: Boolean
+    ): Call<RegisterResponse>
+
+    @GET("/dearfriend/getSchedule.php")
+    fun getSchedule(
+        @Query("uid") uid: String,
+        @Query("date") date: String
+    ): Call<List<ScheduleModel>>
+
+    @FormUrlEncoded
+    @POST("/dearfriend/updateSchedule.php")
+    fun updateSchedule(
+        @Field("documentId") documentId: Int,
+        @Field("isChecked") isChecked: Boolean
+    ): Call<RegisterResponse>
+
+    @FormUrlEncoded
+    @POST("/dearfriend/deleteSchedule.php")
+    fun deleteSchedule(
+        @Field("documentId") documentId: String
+    ): Call<RegisterResponse>
+
+    @FormUrlEncoded
+    @POST("/dearfriend/getMemoDates.php") // 서버의 PHP 파일 이름
+    fun getMemoDates(
+        @Field("uid") uid: String
+    ): Call<List<MemoDate>>
 
 //    // 로그인 세션 확인
 //    @GET("/dearfriend/checkSession.php")
