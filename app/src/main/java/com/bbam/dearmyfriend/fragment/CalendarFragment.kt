@@ -61,6 +61,9 @@ class CalendarFragment : Fragment() {
         setupCalendar()
         setupRecyclerView()
 
+        // UID 가져오기
+        fetchUidFromServer()
+
         // 앱이 시작될 때 현재 날짜의 메모를 가져옵니다.
         selectedDate = CalendarDay.today()
         fetchSchedules() // 서버에서 사용자 일정 불러오기
@@ -73,6 +76,40 @@ class CalendarFragment : Fragment() {
         }
 
         return binding.root
+    }
+
+    private fun fetchUidFromServer() {
+        val email = sharedPreferences.getString("email", null)
+
+        if (email != null) {
+            retrofitService.getUidByEmail(email).enqueue(object : Callback<RegisterResponse> {
+                override fun onResponse(
+                    p0: Call<RegisterResponse>,
+                    p1: Response<RegisterResponse>
+                ) {
+                    if (p1.isSuccessful && p1.body()?.success == true) {
+                        val uid = p1.body()?.uid
+                        if (uid != null) {
+                            // UID를 SharedPreferences에 저장
+                            sharedPreferences.edit().putString("uid", uid).apply()
+                            // 필요한 데이터를 추가적으로 업데이트
+                            fetchSchedules()  // 일정 가져오기 호출
+                            updateEventDecorator() // decorator 업데이트
+                        } else {
+                            Toast.makeText(context, "UID를 가져오는데 실패했습니다.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(context, "서버 응답 오류: ${p1.body()?.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(p0: Call<RegisterResponse>, p1: Throwable) {
+                    Toast.makeText(context, "서버 요청 실패: ${p1.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+        } else {
+            Toast.makeText(context, "이메일이 설정되지 않았습니다.", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupRecyclerView() {
@@ -104,9 +141,14 @@ class CalendarFragment : Fragment() {
 
     private fun fetchSchedules() {
 
+        val uid = sharedPreferences.getString("uid", null)
+        if (uid == null) {
+            fetchUidFromServer() // UID가 없으면 서버에서 가져옴
+            return
+        }
+
         val dateToUse = selectedDate ?: CalendarDay.today()
         val formattedDate = String.format(dateFormat, dateToUse.year, dateToUse.month, dateToUse.day)
-        val uid = sharedPreferences.getString("uid", null)
 
         if (uid != null) {
             retrofitService.getSchedule(uid, formattedDate).enqueue(object : Callback<List<ScheduleModel>> {
@@ -126,7 +168,6 @@ class CalendarFragment : Fragment() {
                 override fun onFailure(p0: Call<List<ScheduleModel>>, p1: Throwable) {
                     Toast.makeText(requireContext(), "서버 오류: ${p1.message}", Toast.LENGTH_SHORT).show()
                 }
-
             })
         }
     }
