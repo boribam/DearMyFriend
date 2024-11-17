@@ -66,6 +66,12 @@ interface RetrofitService {
         @Field("uid") uid: String
     ): Call<List<MemoDate>>
 
+    @FormUrlEncoded
+    @POST("/dearfriend/getUidByEmail.php")
+    fun getUidByEmail(
+        @Field("email") email: String
+    ): Call<RegisterResponse>
+
 //    // 로그인 세션 확인
 //    @GET("/dearfriend/checkSession.php")
 //    fun checkSession(): Call<SessionResponse>
