@@ -16,6 +16,14 @@
         android:src="@drawable/logo_text"
         android:layout_marginTop="260dp"/>
 
+    <!-- ProgressBar -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone" />
+
     <EditText
         android:id="@+id/et_email"
         android:layout_width="match_parent"
