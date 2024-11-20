@@ -4,50 +4,47 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.bbam.dearmyfriend.adapter.PostPictureAdapter
-import com.bbam.dearmyfriend.data.PostData
+import com.bbam.dearmyfriend.data.PostResponse
 import com.bbam.dearmyfriend.databinding.ActivityPostWritingBinding
+import com.bbam.dearmyfriend.network.RetrofitHelper
+import com.bbam.dearmyfriend.network.RetrofitService
 import com.google.android.material.snackbar.Snackbar
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import com.google.firebase.ktx.Firebase
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class PostWritingActivity: AppCompatActivity() {
+class PostWritingActivity : AppCompatActivity() {
 
     private val binding by lazy { ActivityPostWritingBinding.inflate(layoutInflater) }
+    private val retrofitService by lazy { RetrofitHelper.getInstance().create(RetrofitService::class.java) }
+    private val sharedPreferences by lazy { getSharedPreferences("app_prefs", MODE_PRIVATE) }
 
-    private lateinit var auth: FirebaseAuth
-
-    private lateinit var uri: Uri
     private val uriList = ArrayList<Uri>()
     private val maxNumber = 5
-    lateinit var adapter: PostPictureAdapter
-
-    private val db = Firebase.firestore
+    private lateinit var adapter: PostPictureAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(/* savedInstanceState = */ savedInstanceState)
+        super.onCreate(savedInstanceState)
         setContentView(binding.root)
-
-        auth = FirebaseAuth.getInstance() // FirebaseAuth 초기화
 
         adapter = PostPictureAdapter(this, uriList)
         binding.recyclerView.adapter = adapter
         binding.recyclerView.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
 
-        // ImageView를 클릭할 경우
-        // 선택 가능한 이미지의 최대 개수를 초과하지 않았을 경우에만 앨범 호출하기
         binding.imageArea.setOnClickListener {
-            if (uriList.count() == maxNumber) {
+            if (uriList.size == maxNumber) {
                 Toast.makeText(this, "이미지는 최대 ${maxNumber}장까지 첨부할 수 있습니다.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -58,7 +55,7 @@ class PostWritingActivity: AppCompatActivity() {
         }
 
         binding.btnUploadPost.setOnClickListener {
-            uploadPost() // 게시물 업로드 메서드 호출
+            uploadPost()
         }
 
         adapter.setItemClickListener(object : PostPictureAdapter.onItemClickListener {
@@ -74,108 +71,77 @@ class PostWritingActivity: AppCompatActivity() {
         }
     }
 
-    @SuppressLint("SuspiciousIndentation")
     private fun uploadPost() {
+        val uid = sharedPreferences.getString("uid", null) ?: run {
+            Snackbar.make(binding.root, "로그인이 필요합니다.", Snackbar.LENGTH_SHORT).show()
+            return
+        }
 
-        val currentUserUid = auth.currentUser!!.uid
+        val content = binding.etContent.text.toString()
+        if (content.isBlank()) {
+            Snackbar.make(binding.root, "내용을 입력해주세요.", Snackbar.LENGTH_SHORT).show()
+            return
+        }
 
-        val currentDateMillis = System.currentTimeMillis()
+        binding.progressbar.visibility = View.VISIBLE
 
-        db.collection("users").document(currentUserUid).get().addOnSuccessListener { document ->
-            if (document.exists()) {
-                val nickname = document.getString("nickname")
-                val profileImageUri = document.getString("profileImage")
-
-//                val currentDate = SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(Date())
-
-                val postData = PostData(
-                    content = binding.etContent.text.toString(),
-                    uid = currentUserUid,
-                    userId = auth.currentUser?.email,
-                    nickname = nickname,
-                    dateMillis = currentDateMillis,
-                    dateFormatted = formatDate(currentDateMillis),
-                    profileImageUri = profileImageUri
-                )
-
-                binding.progressbar.visibility = View.VISIBLE
-
-                // Firebase Storage에 이미지 업로드
-                //        val imageUriList = uriList // 선택한 이미지 URI 목록
-                val imageUrls = mutableListOf<String>()
-                var uploadCount = 0
-
-                for (uri in uriList) {
-                    val storageRef =
-                        Firebase.storage.reference.child("images/${auth.uid}/${System.currentTimeMillis()}.png")
-                    storageRef.putFile(uri).addOnSuccessListener {
-                        storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
-                            imageUrls.add(downloadUri.toString()) // 업로드된 이미지 URL 추가
-                            uploadCount++
-
-                            if (uploadCount == uriList.size) {
-                                postData.imageUri = ArrayList(imageUrls)
-                                savePostToFirestore(postData)
-                            }
-                        }
-                    }.addOnFailureListener {
-                        Snackbar.make(binding.root, "이미지 업로드 실패", Snackbar.LENGTH_SHORT).show()
-                    }
-                }
-            } else {
-                Snackbar.make(binding.root, "사용자 정보를 찾을 수 없습니다.", Snackbar.LENGTH_SHORT).show()
-            }
-        }.addOnFailureListener { e ->
-            Snackbar.make(binding.root, "닉네임 가져오기 실패: ${e.message}", Snackbar.LENGTH_SHORT).show()
+        if (uriList.isEmpty()) {
+            savePostToDothome(uid, content, listOf())
+        } else {
+            uploadImagesToFirebase(uid, content)
         }
     }
 
-    private fun savePostToFirestore(postData: PostData) {
-        val currentDateMillis = System.currentTimeMillis()  // 현재 시간을 밀리초로 저장
-        postData.dateMillis = currentDateMillis
-        postData.dateFormatted = formatDate(currentDateMillis)
+    private fun uploadImagesToFirebase(uid: String, content: String) {
+        val imageUrls = mutableListOf<String>()
+        var uploadCount = 0
 
-        db.collection("posts").add(postData)
-            .addOnSuccessListener {
-                setResult(RESULT_OK)
-                Snackbar.make(binding.root, "게시글 작성 완료", Snackbar.LENGTH_SHORT).show()
+        for (uri in uriList) {
+            val storageRef = Firebase.storage.reference.child("images/$uid/${System.currentTimeMillis()}.png")
+            storageRef.putFile(uri).addOnSuccessListener {
+                storageRef.downloadUrl.addOnSuccessListener { downloadUri ->
+                    imageUrls.add(downloadUri.toString())
+                    uploadCount++
+
+                    if (uploadCount == uriList.size) {
+                        savePostToDothome(uid, content, imageUrls)
+                    }
+                }
+            }.addOnFailureListener { e ->
+                Log.e("PostWritingActivity", "Image upload failed: ${e.message}")
+                Snackbar.make(binding.root, "이미지 업로드 실패: ${e.message}", Snackbar.LENGTH_SHORT).show()
                 binding.progressbar.visibility = View.GONE
-                finish() // 활동 종료 후 이전 화면으로 돌아감
-            }
-            .addOnFailureListener {
-                Snackbar.make(binding.root, "게시글 작성 실패", Snackbar.LENGTH_SHORT).show()
-            }
-    }
-
-    @SuppressLint("NotifyDataSetChanged")
-    private val registerForActivityResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        when (result.resultCode) {
-            RESULT_OK -> {
-                val clipData = result.data?.clipData
-                if (clipData != null) {  // 이미지를 여러 장 선택할 경우
-                    val clipDataSize = clipData.itemCount
-                    val selectableCount = maxNumber - uriList.count()
-                    if (clipDataSize > selectableCount) { // 최대 선택 가능한 개수를 초과해서 선택한 경우
-                        Toast.makeText(this, "이미지는 최대 ${selectableCount}장까지 첨부할 수 있습니다.", Toast.LENGTH_SHORT).show()
-                    } else {
-                        // 선택 가능한 경우 ArrayList에 가져온 uri를 넣어줌
-                        for (i in 0 until clipDataSize) {
-                            uriList.add(clipData.getItemAt(i).uri)
-                        }
-                    }
-
-                } else {
-                    // 이미지를 한 장만 선택할 경우 null 이 올 수 있음
-                    val uri = result?.data?.data
-                    if (uri != null) {
-                        uriList.add(uri)
-                    }
-                }
-                // notifyDataSetChanged()를 호출하여 Adapter에게 값이 변경되었음을 알림
-                adapter.notifyDataSetChanged()
-                printCount()
             }
         }
+    }
+
+    private fun savePostToDothome(uid: String, content: String, imageUrls: List<String>) {
+        val dateMillis = System.currentTimeMillis()
+        val dateFormatted = formatDate(dateMillis)
+
+        // Gson을 사용하여 이미지 URL 리스트를 JSON 문자열로 변환
+        val gson = com.google.gson.Gson()
+        val imageUrlsJson = gson.toJson(imageUrls)
+
+        retrofitService.uploadPost(uid, content, dateMillis, dateFormatted, imageUrlsJson)
+            .enqueue(object : Callback<PostResponse> {
+                override fun onResponse(call: Call<PostResponse>, response: Response<PostResponse>) {
+                    binding.progressbar.visibility = View.GONE
+                    if (response.isSuccessful && response.body()?.success == true) {
+                        Toast.makeText(this@PostWritingActivity, "게시물 작성 성공", Toast.LENGTH_SHORT).show()
+                        finish()
+                    } else {
+                        Log.e("PostWritingActivity", "Server error: ${response.errorBody()?.string()}")
+                        Snackbar.make(binding.root, "게시물 저장 실패: ${response.body()?.message}", Snackbar.LENGTH_SHORT).show()
+                    }
+                }
+
+                override fun onFailure(call: Call<PostResponse>, t: Throwable) {
+                    binding.progressbar.visibility = View.GONE
+                    Log.e("PostWritingActivity", "Request failed: ${t.message}")
+                    Snackbar.make(binding.root, "네트워크 오류: ${t.message}", Snackbar.LENGTH_SHORT).show()
+                }
+            })
     }
 
     private fun formatDate(millis: Long): String {
@@ -183,8 +149,28 @@ class PostWritingActivity: AppCompatActivity() {
         return dateFormat.format(Date(millis))
     }
 
+    @SuppressLint("NotifyDataSetChanged")
+    private val registerForActivityResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val clipData = result.data?.clipData
+            if (clipData != null) {
+                val selectableCount = maxNumber - uriList.size
+                if (clipData.itemCount > selectableCount) {
+                    Toast.makeText(this, "이미지는 최대 ${selectableCount}장까지 첨부할 수 있습니다.", Toast.LENGTH_SHORT).show()
+                } else {
+                    for (i in 0 until clipData.itemCount) {
+                        uriList.add(clipData.getItemAt(i).uri)
+                    }
+                }
+            } else {
+                result.data?.data?.let { uriList.add(it) }
+            }
+            adapter.notifyDataSetChanged()
+            printCount()
+        }
+    }
+
     private fun printCount() {
-        val text = "${uriList.count()}/${maxNumber}"
-        binding.countArea.text = text
+        binding.countArea.text = "${uriList.size}/$maxNumber"
     }
 }

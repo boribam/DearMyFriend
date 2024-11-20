@@ -1,13 +1,15 @@
 package com.bbam.dearmyfriend.data
 
 data class PostData(
-    var content: String = "", // 게시물 내용
-    var imageUri: List<String>? = null, // 이미지 URI 목록
-    var uid: String = "", // 작성자의 UID
-    var userId: String? = "", // 작성자의 이메일
-    var nickname: String? = "", // 작성자의 닉네임
-    var dateMillis: Long = 0L, // 게시물 작성 날짜
-    var dateFormatted: String = "",
-    var profileImageUri: String? = null, // 작성자의 프로필 사진 URI
-    var postId: String = ""
+    val id: Int,
+    val uid: String,
+    val content: String,
+    val dateMillis: Long,
+    val dateFormatted: String,
+    val imageUrls: List<String>?, // 서버에서 전달된 이미지 URL 리스트
+    val created_at: String,
+    val nickname: String?, // 닉네임 추가
+    val profileImage: String?, // 프로필 이미지 URL 추가
+    var isLiked: Boolean = false // 좋아요 상태
 )
+

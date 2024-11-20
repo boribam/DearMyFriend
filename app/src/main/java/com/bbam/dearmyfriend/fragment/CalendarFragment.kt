@@ -2,7 +2,9 @@ package com.bbam.dearmyfriend.fragment
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
@@ -18,10 +20,12 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bbam.dearmyfriend.R
+import com.bbam.dearmyfriend.activity.LoginActivity
 import com.bbam.dearmyfriend.adapter.ScheduleListAdapter
 import com.bbam.dearmyfriend.data.MemoDate
 import com.bbam.dearmyfriend.data.RegisterResponse
 import com.bbam.dearmyfriend.data.ScheduleModel
+import com.bbam.dearmyfriend.data.ScheduleResponse
 import com.bbam.dearmyfriend.databinding.FragmentCalendarBinding
 import com.bbam.dearmyfriend.decorator.EventDecorator
 import com.bbam.dearmyfriend.decorator.SaturdayDecorator
@@ -62,7 +66,19 @@ class CalendarFragment : Fragment() {
         setupRecyclerView()
 
         // UID 가져오기
-        fetchUidFromServer()
+        val uid = sharedPreferences.getString("uid", null)
+
+        if (uid == null) {
+            Log.e("CalendarFragment", "UID is null. Redirecting to LoginActivity.")
+
+            // UID가 없으면 로그인 화면으로 이동
+            startActivity(Intent(requireContext(), LoginActivity::class.java))
+            activity?.finish()
+        } else {
+            Log.d("CalendarFragment", "UID retrieved from SharedPreferences: $uid")
+            fetchSchedules() // 일정 불러오기
+            updateEventDecorator() // 데코레이터 업데이트
+        }
 
         // 앱이 시작될 때 현재 날짜의 메모를 가져옵니다.
         selectedDate = CalendarDay.today()
@@ -76,40 +92,6 @@ class CalendarFragment : Fragment() {
         }
 
         return binding.root
-    }
-
-    private fun fetchUidFromServer() {
-        val email = sharedPreferences.getString("email", null)
-
-        if (email != null) {
-            retrofitService.getUidByEmail(email).enqueue(object : Callback<RegisterResponse> {
-                override fun onResponse(
-                    p0: Call<RegisterResponse>,
-                    p1: Response<RegisterResponse>
-                ) {
-                    if (p1.isSuccessful && p1.body()?.success == true) {
-                        val uid = p1.body()?.uid
-                        if (uid != null) {
-                            // UID를 SharedPreferences에 저장
-                            sharedPreferences.edit().putString("uid", uid).apply()
-                            // 필요한 데이터를 추가적으로 업데이트
-                            fetchSchedules()  // 일정 가져오기 호출
-                            updateEventDecorator() // decorator 업데이트
-                        } else {
-                            Toast.makeText(context, "UID를 가져오는데 실패했습니다.", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        Toast.makeText(context, "서버 응답 오류: ${p1.body()?.message}", Toast.LENGTH_SHORT).show()
-                    }
-                }
-
-                override fun onFailure(p0: Call<RegisterResponse>, p1: Throwable) {
-                    Toast.makeText(context, "서버 요청 실패: ${p1.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
-        } else {
-            Toast.makeText(context, "이메일이 설정되지 않았습니다.", Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun setupRecyclerView() {
@@ -143,33 +125,48 @@ class CalendarFragment : Fragment() {
 
         val uid = sharedPreferences.getString("uid", null)
         if (uid == null) {
-            fetchUidFromServer() // UID가 없으면 서버에서 가져옴
+            Log.e("CalendarFragment", "UID is null. Cannot fetch schedules.")
             return
         }
 
         val dateToUse = selectedDate ?: CalendarDay.today()
         val formattedDate = String.format(dateFormat, dateToUse.year, dateToUse.month, dateToUse.day)
 
-        if (uid != null) {
-            retrofitService.getSchedule(uid, formattedDate).enqueue(object : Callback<List<ScheduleModel>> {
-                override fun onResponse(
-                    p0: Call<List<ScheduleModel>>,
-                    p1: Response<List<ScheduleModel>>
-                ) {
-                    if (p1.isSuccessful) {
-                        itemList.clear()
-                        itemList.addAll(p1.body() ?: emptyList())
-                        adapter.submitList(itemList)
-                    } else {
-                        Snackbar.make(binding.root, "일정을 불러오는데에 실패했습니다", Snackbar.LENGTH_SHORT).show()
-                    }
-                }
+        Log.d("fetchSchedules", "Requesting schedules for uid=$uid, date=$formattedDate")
 
-                override fun onFailure(p0: Call<List<ScheduleModel>>, p1: Throwable) {
-                    Toast.makeText(requireContext(), "서버 오류: ${p1.message}", Toast.LENGTH_SHORT).show()
-                }
-            })
-        }
+
+        retrofitService.getSchedule(uid, formattedDate).enqueue(object : Callback<ScheduleResponse> {
+            override fun onResponse(
+                call: Call<ScheduleResponse>,
+                response: Response<ScheduleResponse>
+            ) {
+                Log.d("fetchSchedules", "Response: ${response.body()}") // 서버 응답 출력
+
+                if (response.isSuccessful) {
+                    val scheduleResponse = response.body()
+                    Log.d("fetchSchedule", "Response: $scheduleResponse") // 응답 데이터 출력
+                    if (scheduleResponse != null && scheduleResponse.success) {
+                        itemList.clear()
+                        itemList.addAll(scheduleResponse.data)
+                        Log.d("fetchSchedule", "Updated itemList: $itemList") // 추가된 일정 확인
+                        adapter.submitList(itemList)
+                        adapter.notifyDataSetChanged() // 강제로 RecyclerView 갱신
+                    } else {
+                        Log.e("fetchSchedule", "서버 응답 오류: success=false")
+                        Toast.makeText(requireContext(), "일정을 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
+                        adapter.submitList(itemList)
+                        adapter.notifyDataSetChanged() // RecyclerView 갱신
+                    }
+                } else {
+                    Log.e("fetchSchedule", "서버 응답 실패: ${response.errorBody()?.string()}")
+                    Toast.makeText(requireContext(), "서버 오류", Toast.LENGTH_SHORT).show()                }
+            }
+
+            override fun onFailure(call: Call<ScheduleResponse>, t: Throwable) {
+                Log.e("fetchSchedule", "서버 요청 실패: ${t.message}")
+                Toast.makeText(requireContext(), "서버 오류: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
     }
 
     private fun showAddScheduleDialog() {
@@ -207,6 +204,7 @@ class CalendarFragment : Fragment() {
                         ) {
                             if (p1.isSuccessful && p1.body()?.success == true) {
                                 fetchSchedules()
+                                updateEventDecorator() // 데코레이터 즉시 갱신
                                 dialog.dismiss()
                             } else {
                                 Toast.makeText(context, "일정 추가 실패", Toast.LENGTH_SHORT).show()
@@ -214,12 +212,14 @@ class CalendarFragment : Fragment() {
                         }
 
                         override fun onFailure(p0: Call<RegisterResponse>, p1: Throwable) {
+                            Log.e("서버오류","서버오류: ${p1.message}")
                             Toast.makeText(context, "서버 오류: ${p1.message}", Toast.LENGTH_SHORT).show()
                         }
                     })
                 }
             } else {
-                Toast.makeText(requireContext(), "메모를 입력하세요", Toast.LENGTH_SHORT).show()
+                Snackbar.make(requireContext(), binding.root, "메모를 입력하세요", Snackbar.LENGTH_SHORT).show()
+//                Toast.makeText(requireContext(), "메모를 입력하세요", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -234,8 +234,10 @@ class CalendarFragment : Fragment() {
         if (uid != null) {
             retrofitService.getMemoDates(uid).enqueue(object : Callback<List<MemoDate>> {
                 override fun onResponse(p0: Call<List<MemoDate>>, p1: Response<List<MemoDate>>) {
+                    Log.d("updateEventDecorator", "Response: ${p1.body()}") // 서버 응답 확인
                     if (p1.isSuccessful) {
                         val datesFromServer = p1.body() ?: emptyList()
+                        Log.d("updateEventDecorator", "Dates from server: $datesFromServer") // 데이터 확인
 
                         // 서버에서 가져운 날짜를 CalendarDay 객체로 변환
                         for (memoDate in datesFromServer) {
@@ -279,6 +281,7 @@ class CalendarFragment : Fragment() {
                 }
 
                 override fun onFailure(p0: Call<List<MemoDate>>, p1: Throwable) {
+                    Log.e("updateEventDecorator", "Server error: ${p1.message}")
                     Toast.makeText(requireContext(), "서버 오류: ${p1.message}", Toast.LENGTH_SHORT).show()
                 }
 
@@ -300,12 +303,15 @@ class CalendarFragment : Fragment() {
                 val position = viewHolder.adapterPosition
                 val scheduleItem = itemList[position]
                 val dateToRemove = scheduleItem.date
+                Log.d("deleteSchedule", "Attempting to delete: id=${scheduleItem.id}")
 
-                retrofitService.deleteSchedule(scheduleItem.documentId).enqueue(object : Callback<RegisterResponse> {
+                retrofitService.deleteSchedule(scheduleItem.id.toString()).enqueue(object : Callback<RegisterResponse> {
                     override fun onResponse(
                         p0: Call<RegisterResponse>,
                         p1: Response<RegisterResponse>
                     ) {
+                        Log.d("deleteSchedule", "Response: ${p1.body()}")
+
                         if (p1.isSuccessful && p1.body()?.success == true) {
                             val updateList = itemList.toMutableList()
                             updateList.removeAt(position)
@@ -323,6 +329,7 @@ class CalendarFragment : Fragment() {
                     }
 
                     override fun onFailure(p0: Call<RegisterResponse>, p1: Throwable) {
+                        Log.e("deleteSchedule", "서버 요청 실패: ${p1.message}")
                         Toast.makeText(requireContext(), "삭제 실패: ${p1.message}", Toast.LENGTH_SHORT).show()
                         adapter.submitList(itemList) // 실패 시 원래 목록 복원
                     }

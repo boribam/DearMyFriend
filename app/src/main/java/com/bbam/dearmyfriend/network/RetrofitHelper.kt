@@ -1,5 +1,6 @@
 package com.bbam.dearmyfriend.network
 
+import com.google.gson.GsonBuilder
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -44,24 +45,11 @@ class RetrofitHelper {
 
         fun getInstance() : Retrofit {
 
-//            val cookieManager = CookieManager().apply {
-//                setCookiePolicy(CookiePolicy.ACCEPT_ALL)
-//            }
-//
-//            // HttpLoggingInterceptor 추가 설정
-//            val logging = HttpLoggingInterceptor().apply {
-//                level = HttpLoggingInterceptor.Level.BODY
-//            }
-
-//            // OkHttpClient에 로깅 인터셉터 추가
-//            val client = OkHttpClient.Builder()
-//                .addInterceptor(logging)
-//                .build()
+            var gson = GsonBuilder().setLenient().create()
 
             val retrofit = Retrofit.Builder().run {
                 baseUrl(DOTHOME_BASE_URL)
-//                client(client) // 로깅이 포함된 OkHttpClient 사용
-                addConverterFactory(GsonConverterFactory.create())
+                addConverterFactory(GsonConverterFactory.create(gson))
                 build()
             }
             return retrofit
