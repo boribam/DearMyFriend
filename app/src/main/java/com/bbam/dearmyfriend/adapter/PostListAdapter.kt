@@ -42,6 +42,8 @@ class PostListAdapter(
     override fun onBindViewHolder(holder: VH, position: Int) {
         val postData = itemList[position]
 
+        Log.d("PostListAdapter", "Post Data: $postData")
+
         // 닉네임 설정
         holder.binding.tvNickname.text = postData.nickname ?: "익명"
 
