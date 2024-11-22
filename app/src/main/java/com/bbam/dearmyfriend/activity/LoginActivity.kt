@@ -49,6 +49,10 @@ class LoginActivity : AppCompatActivity() {
             // 로그인 처리
             loginUser(email, password)
         }
+
+        binding.signUp.setOnClickListener {
+            startActivity(Intent(this, SignupActivity::class.java))
+        }
     }
 
     private fun loginUser(email: String, password: String) {
@@ -57,10 +61,6 @@ class LoginActivity : AppCompatActivity() {
                 // ProgressBar 숨김
                 binding.progressBar.visibility = View.GONE
                 binding.btnLogin.isEnabled = true // 버튼 활성화
-
-//                Log.d("LoginActivity", "Response Code: ${p1.code()}")
-//                Log.d("LoginActivity", "Response Body: ${p1.body()}")
-//                Log.d("LoginActivity", "Error Body: ${p1.errorBody()?.string()}")
 
                 if (p1.isSuccessful) {
                     val loginResponse = p1.body()
@@ -71,6 +71,7 @@ class LoginActivity : AppCompatActivity() {
                         sharedPreferences.edit()
                             .putString("email", email)
                             .putString("uid", loginResponse.uid)
+                            .putBoolean("is_logged_in", true) // 로그인 상태 저장
                             .apply()
 
                         // 저장 확인 로그

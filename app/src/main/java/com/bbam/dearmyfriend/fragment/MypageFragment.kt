@@ -79,10 +79,10 @@ class MypageFragment : Fragment() {
                 call: retrofit2.Call<Map<String, String>>,
                 response: retrofit2.Response<Map<String, String>>
             ) {
-                if (response.isSuccessful) {
+                if (response.isSuccessful && response.body() != null) {
                     val data = response.body()
-                    binding.tvNicknameMypage.text = data?.get("user_nickname") ?: "익명"
-                    val profileImage = data?.get("user_profile_image")
+                    binding.tvNicknameMypage.text = data?.get("nickname") ?: "익명"
+                    val profileImage = data?.get("profileImage")
                     if (!profileImage.isNullOrEmpty()) {
                         Glide.with(requireContext())
                             .load(profileImage)
@@ -97,6 +97,7 @@ class MypageFragment : Fragment() {
             }
 
             override fun onFailure(call: retrofit2.Call<Map<String, String>>, t: Throwable) {
+                Log.e("프로필 정보", "서버오류: ${t.message}")
                 Snackbar.make(binding.root, "서버 오류: ${t.message}", Snackbar.LENGTH_SHORT).show()
             }
         })
@@ -213,7 +214,13 @@ class MypageFragment : Fragment() {
 
     private fun logout() {
         sharedPreferences.edit().clear().apply()
-        startActivity(Intent(requireContext(), LoginActivity::class.java))
+
+        redirectToLogin()
+    }
+
+    private fun redirectToLogin() {
+        val intent = Intent(requireContext(), LoginActivity::class.java)
+        startActivity(intent)
         requireActivity().finish()
     }
 

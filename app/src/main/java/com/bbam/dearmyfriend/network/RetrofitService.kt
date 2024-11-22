@@ -1,6 +1,7 @@
 package com.bbam.dearmyfriend.network
 
 import com.bbam.dearmyfriend.data.GeocodeResponse
+import com.bbam.dearmyfriend.data.LikedPostsResponse
 import com.bbam.dearmyfriend.data.LikeResponse
 import com.bbam.dearmyfriend.data.LoginResponse
 import com.bbam.dearmyfriend.data.MapItem
@@ -109,7 +110,7 @@ interface RetrofitService {
     @POST("/dearfriend/getUserProfile.php")
     fun getUserProfile(
         @Field("uid") uid: String
-    ): Call<Map<String, String>> // 그대로 유지
+    ): Call<Map<String, String>>
 
     @FormUrlEncoded
     @POST("/dearfriend/updateNickname.php")
@@ -125,15 +126,23 @@ interface RetrofitService {
         @Field("profileImage") profileImage: String
     ): Call<UserResponse> // UserResponse로 변경
 
-    @GET("/dearfriend/getLikedPosts.php")
-    fun getLikedPosts(
-        @Query("uid") uid: String
-    ): Call<List<PostData>>
-
     @GET("/dearfriend/getUserPosts.php")
     fun getUserPosts(
         @Query("uid") uid: String
-    ): Call<List<PostData>>
+    ): Call<PostResponse>
+
+    // 좋아요 토글 (좋아요 추가/취소)
+    @FormUrlEncoded
+    @POST("/dearfriend/toggleLike.php")
+    fun toggleLike(
+        @Field("postId") postId: Int,
+        @Field("uid") uid: String
+    ): Call<LikeResponse>
+
+    @GET("/dearfriend/getLikedPosts.php")
+    fun getLikedPosts(
+        @Query("uid") uid: String
+    ): Call<LikedPostsResponse>
 
 //    // 로그인 세션 확인
 //    @GET("/dearfriend/checkSession.php")

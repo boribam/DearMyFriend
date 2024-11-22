@@ -19,9 +19,20 @@ class IntroActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
 
+        // 1.5초 동안 인트로 화면 유지 후 이동
         Handler(Looper.getMainLooper()).postDelayed({
-            startActivity(Intent(this, LoginActivity::class.java))
+            val sharedPreferences = getSharedPreferences("app_prefs", MODE_PRIVATE)
+            val isLoggedIn = sharedPreferences.getBoolean("is_logged_in", false)
+
+            if (isLoggedIn) {
+                // 로그인 상태 유지 시 MainActivity로 이동
+                startActivity(Intent(this, MainActivity::class.java))
+            } else {
+                // 로그인 필요 시 LoginActivity로 이동
+                startActivity(Intent(this, LoginActivity::class.java))
+            }
+            // IntroActivity 종료
             finish()
-        }, 1500)
+        }, 1500) // 1.5초 대기
     }
 }
