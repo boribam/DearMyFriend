@@ -122,7 +122,6 @@ class MypageFragment : Fragment() {
         }
 
     private fun uploadProfileImageToServer(imageUri: Uri) {
-//        val profileImageUrl = "https://your-server-path/${currentUserUid}.jpg"
 
         // 프로필 이미지를 Firebase에 업로드하고 URL 저장
         val storageRef = com.google.firebase.ktx.Firebase.storage.reference.child("profile_images/$currentUserUid.jpg")
