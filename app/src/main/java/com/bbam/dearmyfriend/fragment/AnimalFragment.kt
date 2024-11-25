@@ -107,7 +107,7 @@ class AnimalFragment : Fragment() {
             showDatePickerDialog(isStartDate = false)
         }
 
-// 시도 선택 시 시군구 데이터 로드
+        // 시도 선택 시 시군구 데이터 로드
         binding.spinnerSido.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 val selectedSidoCode = sidoList[position].second
