@@ -26,7 +26,7 @@
             android:id="@+id/iv_address"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@drawable/marker"
+            android:src="@drawable/hospital_marker"
             android:layout_gravity="center_vertical"/>
 
         <TextView

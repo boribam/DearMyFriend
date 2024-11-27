@@ -37,6 +37,11 @@ import kotlinx.coroutines.withContext
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import kotlin.math.atan
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MapFragment: Fragment(), OnMapReadyCallback {
 
@@ -58,6 +63,7 @@ class MapFragment: Fragment(), OnMapReadyCallback {
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1000
+        private const val MAX_DISTANCE_KM = 5.0 // 반경 5km
     }
 
     private lateinit var locationPermissionRequest: ActivityResultLauncher<Array<String>>
@@ -113,17 +119,7 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         naverMap.uiSettings.isLocationButtonEnabled = true
         naverMap.locationTrackingMode = LocationTrackingMode.Follow
 
-        // 지도가 준비되었을 때만 마커 추가
-        updateMarkersInView(naverMap)
-
-//        // 지도가 이동할 때마다 경계 내 마커 업데이트
-//        naverMap.addOnCameraChangeListener { _, _ ->
-//            if (!hospitalList.isNullOrEmpty()) {
-//                updateMarkersInView(naverMap)
-//            }
-//        }
-
-        // 병원 데이터를 가져오고, 주소로 좌표 변환 후 마커를 지도에 표시
+        // 병원 데이터를 가져오고, 주소로 좌표 변환 후 5km 이내 병원만 마커 표시
         // 병원 데이터를 비동기로 로드하여 마커를 표시
         loadHospitalData()
 
@@ -139,16 +135,10 @@ class MapFragment: Fragment(), OnMapReadyCallback {
                     withContext(Dispatchers.Main) {
                         hospitalList.clear()
 
-                        val operatingHospitals = hospitals.filter { hospital ->
-                            hospital.statusCode == 1
-                        }
+                        // 운영 중인 병원만 필터링
+                        val operatingHospitals = hospitals.filter { it.statusCode == 1 }
 
-                        hospitalList.addAll(operatingHospitals)
-
-                        if(naverMap != null) {
-                            updateMarkersInView(naverMap!!)
-                        }
-
+                        // 주소를 좌표로 변환하여 5km 반경 내 병원만 추가
                         operatingHospitals.forEach { hospital ->
                             if (!hospital.address.isNullOrEmpty()) {
                                 convertAddressToCoordinates(hospital)
@@ -156,7 +146,6 @@ class MapFragment: Fragment(), OnMapReadyCallback {
                                 Log.e("MapFragment", "Hospital has no valid address: ${hospital.name}")
                             }
                         }
-
                     }
                 } else {
                     withContext(Dispatchers.Main) {
@@ -171,64 +160,8 @@ class MapFragment: Fragment(), OnMapReadyCallback {
         }
     }
 
-    // 지도의 현재 화면에 있는 마커만 업데이트
-    private fun updateMarkersInView(naverMap: NaverMap) {
-
-        // naverMap 또는 hospitalList가 null일 경우 처리
-        if (naverMap == null || hospitalList.isNullOrEmpty()) {
-            Log.e("MapFragment", "NaverMap or hospitalList is null or empty")
-            return
-        }
-
-        val currentBounds: LatLngBounds = naverMap.contentBounds
-
-        // 기존 마커 중 화면에서 벗어난 마커는 비활성화
-        markerList.forEach { marker ->
-            if (!currentBounds.contains(marker.position)) {
-                marker.map = null  // 지도에서 제거
-            }
-        }
-
-        // 화면에 보이는 마커 중 아직 추가되지 않은 마커만 추가
-        for (hospital in hospitalList) {
-            // 병원의 위도와 경도가 null인지 확인
-            if (hospital.latitude == null || hospital.longitude == null) {
-                Log.e("MapFragment", "Hospital has invalid coordinates: ${hospital.name}")
-                continue
-            }
-
-            val position = LatLng(hospital.latitude!!, hospital.longitude!!)
-            if (currentBounds.contains(position)) {
-                // 이미 추가된 마커인지 확인 후, 없으면 추가
-                val existingMarker = markerList.find { it.position == position }
-                if (existingMarker == null) {
-                    addMarker(position, hospital)
-                } else {
-                    existingMarker.map = naverMap // 기존 마커 활성화
-                }
-            }
-        }
-
-        Log.d("MapFragment", "naverMap: $naverMap, hospitalList size: ${hospitalList?.size}")
-
-    }
-
-    // 마커를 추가하는 함수
-    private fun addMarker(latLng: LatLng, hospital: MapItem) {
-        val marker = Marker().apply {
-            position = latLng
-            map = naverMap  // 마커를 지도에 추가
-            captionText = hospital.name ?: "병원 이름 없음"
-            setOnClickListener {
-                showBottomSheet(hospital)
-                true
-            }
-        }
-        markerList.add(marker) // 추가한 마커를 리스트에 저장
-    }
-
     private fun convertAddressToCoordinates(hospital: MapItem) {
-        val formattedAddress = hospital.address?.trim() ?: ""
+        val formattedAddress = hospital.address?.trim() ?: return
 
         // 지오코딩 API 호출
         naverApiService.getCoordinates(formattedAddress).enqueue(object : Callback<GeocodeResponse> {
@@ -245,10 +178,25 @@ class MapFragment: Fragment(), OnMapReadyCallback {
                             hospital.latitude = latLng.latitude
                             hospital.longitude = latLng.longitude
 
-                            // 변환된 좌표로 마커 추가
-                            addMarker(latLng, hospital)
-                            Log.d("MapFragment", "Geocoding successful: ${hospital.name} at ${latLng.latitude}, ${latLng.longitude}")
+                            // 사용자 위치와 비교하여 5km 반경 내 병원만 마커로 추가
+                            val userLatitude = naverMap.locationOverlay.position.latitude
+                            val userLongitude = naverMap.locationOverlay.position.longitude
 
+                            if (isWithinDistance(
+                                    userLatitude,
+                                    userLongitude,
+                                    latLng.latitude,
+                                    latLng.longitude,
+                                    MAX_DISTANCE_KM
+                                )
+                            ) {
+
+                                // 5km 내 병원 정보를 로그로 출력
+                                Log.d("NearbyHospital", "Name: ${hospital.name}, Address: ${hospital.address}, Latitude: ${hospital.latitude}, Longitude: ${hospital.longitude}")
+
+                                // 마커 추가
+                                addMarker(hospital)
+                            }
                         } catch (e: Exception) {
                             Log.e("MapFragment", "Error parsing coordinates for ${hospital.name}: ${e.message}")
                         }
@@ -264,6 +212,33 @@ class MapFragment: Fragment(), OnMapReadyCallback {
                 Log.e("GeocodeResponse", "Network error: ${t.message}")
             }
         })
+    }
+
+    private fun addMarker(hospital: MapItem) {
+        val marker = Marker().apply {
+            position = LatLng(hospital.latitude!!, hospital.longitude!!)
+            map = naverMap
+            captionText = hospital.name ?: "병원 이름 없음"
+            icon = com.naver.maps.map.overlay.OverlayImage.fromResource(R.drawable.hospital_marker)
+            setOnClickListener {
+                showBottomSheet(hospital)
+                true
+            }
+        }
+        markerList.add(marker)
+    }
+
+    // 5km 반경 내 병원만 표시 (과도한 마커 생성 방지)
+    private fun isWithinDistance(lat1: Double, lng1: Double, lat2: Double, lng2: Double, distance: Double): Boolean {
+        val radius = 6371.0 // 지구 반지름 (km)
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLng = Math.toRadians(lng2 - lng1)
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLng / 2) * sin(dLng / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        val distanceInKm = radius * c
+        return distanceInKm <= distance
     }
 
     private fun showBottomSheet(hospital: MapItem) {
