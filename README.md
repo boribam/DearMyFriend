@@ -1,4 +1,4 @@
-# 디어프렌드(DEARFRIEND)
+<img src="https://capsule-render.vercel.app/api?type=waving&color=auto&height=200&section=header&text=디어프렌드(DEARFRIEND&fontSize=60" />
 ### 반려동물에 대한 잊기 쉬운 것들을 메모하고, 다른 사람들과 반려동물의 사진을 공유해보세요!
 
 #### 🙋🏻‍♀️ 1인 개발 프로젝트
